@@ -223,6 +223,11 @@
                 </div>
             </div>
         </div>
+        <!-- スクロール誘導（どんぐりが飛び去ったあとに表示） -->
+        <div id="scroll-cue" class="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 opacity-0 pointer-events-none">
+            <span class="bg-white/85 text-gray-500 text-xs font-bold px-4 py-1.5 rounded-full shadow-sm">下にスクロール</span>
+            <i class="fa-solid fa-chevron-down text-gblue animate-bounce"></i>
+        </div>
     </header>
 
     <main class="max-w-6xl mx-auto px-4 py-8 space-y-28 md:space-y-36">
@@ -594,6 +599,23 @@
             var unlock = function () { document.documentElement.style.overflow = ''; };
             setTimeout(unlock, 8000); // 保険
 
+            // ===== スクロール誘導 =====
+            var cueShown = false;
+            function showScrollCue() {
+                var cue = document.getElementById('scroll-cue');
+                if (!cue || cueShown) return;
+                cueShown = true;
+                gsap.to(cue, { opacity: 1, duration: 0.8, ease: 'power1.out' });
+                // ひとたびスクロールしたら役目を終えて消える
+                ScrollTrigger.create({
+                    start: 80,
+                    once: true,
+                    onEnter: function () {
+                        gsap.to(cue, { opacity: 0, duration: 0.4, onComplete: function () { cue.remove(); } });
+                    }
+                });
+            }
+
             // ===== どんぐり演出 =====
             var hero = document.getElementById('hero');
             function spawnAcorn() {
@@ -632,45 +654,60 @@
                 var img = spawnAcorn();
                 var W = hero.clientWidth, H = hero.clientHeight;
                 var size = W < 768 ? 44 : 60;
-                // テキスト要素の上端を「階段」にする
+                var acornH = size * 1.08; // 画像の縦横比ぶんの高さ
+                // テキスト要素の上端を「階段」にする（各要素の横幅の中に足場を取る）
                 var stepEls = ['hero-badge', 'hero-name-ja', 'hero-en', 'hero-sub', 'hero-cta'];
                 var steps = [];
-                stepEls.forEach(function (id, i) {
+                var n = 0;
+                stepEls.forEach(function (id) {
                     var el = document.getElementById(id);
                     if (!el) return;
                     var p = heroPos(el);
-                    steps.push({ x: Math.min(p.x + 24 + i * W * 0.07, W * 0.5), y: p.y - size * 0.75 });
+                    var fx = Math.min(0.18 + n * 0.14, 0.8);
+                    var sx = p.x + Math.max(8, Math.min(p.w * fx, p.w - size - 8));
+                    // 底面がテキスト上端にちょうど触れる高さ（2pxだけ重ねて接地感を出す）
+                    steps.push({ x: sx, y: p.y - acornH + 2 });
+                    n++;
                 });
                 if (steps.length === 0) { img.remove(); return; }
                 var av = document.getElementById('hero-avatar');
                 var ap = heroPos(av);
                 var target = { x: ap.x + ap.w / 2 - size / 2, y: ap.y + ap.h * 0.25 };
 
-                gsap.set(img, { x: steps[0].x - 60, y: -90 });
+                gsap.set(img, { x: steps[0].x - 70, y: -100, transformOrigin: '50% 85%' });
                 var tl = gsap.timeline({ onComplete: function () { img.remove(); } });
-                // 最初の落下
+                function squash(at) {
+                    tl.to(img, { scaleY: 0.78, scaleX: 1.16, duration: 0.08, ease: 'power2.out' }, at)
+                        .to(img, { scaleY: 1, scaleX: 1, duration: 0.16, ease: 'power2.out' }, at + 0.08);
+                }
+                // 最初の落下 → バッジの上にストン
                 tl.to(img, { x: steps[0].x, duration: 0.45, ease: 'none' }, 0)
                     .to(img, { y: steps[0].y, duration: 0.45, ease: 'power1.in' }, 0);
-                // 階段を跳ね下りる
+                squash(0.45);
+                // 階段を跳ね下りる（左右にコロコロ揺れながら）
                 var t = 0.45;
                 for (var i = 1; i < steps.length; i++) {
-                    var d = 0.4;
-                    var peak = Math.min(steps[i - 1].y, steps[i].y) - H * 0.06;
+                    var d = 0.42;
+                    var peak = Math.min(steps[i - 1].y, steps[i].y) - H * 0.07;
                     tl.to(img, { x: steps[i].x, duration: d, ease: 'none' }, t)
+                        .to(img, { rotation: i % 2 ? 13 : -13, duration: d, ease: 'sine.inOut' }, t)
                         .to(img, { y: peak, duration: d * 0.45, ease: 'power1.out' }, t)
                         .to(img, { y: steps[i].y, duration: d * 0.55, ease: 'power1.in' }, t + d * 0.45);
                     t += d;
+                    squash(t);
                 }
                 // 最後に大きく跳ねてキャラへ
                 var big = 0.75;
                 tl.to(img, { x: target.x, duration: big, ease: 'none' }, t)
+                    .to(img, { rotation: 0, duration: big, ease: 'sine.inOut' }, t)
                     .to(img, { y: Math.min(steps[steps.length - 1].y, target.y) - H * 0.3, duration: big * 0.5, ease: 'power1.out' }, t)
                     .to(img, { y: target.y, duration: big * 0.5, ease: 'power1.in' }, t + big * 0.5);
                 t += big;
                 tl.call(function () { bumpAvatar(1); }, null, t);
                 // 当たって画面外へ跳ね飛ぶ
-                tl.to(img, { x: '+=' + W * 0.35, y: -H * 0.3, duration: 0.55, ease: 'power1.out' }, t)
-                    .to(img, { rotation: 1260, duration: t + 0.55, ease: 'none' }, 0);
+                tl.to(img, { x: '+=' + W * 0.35, y: -H * 0.3, rotation: '+=540', duration: 0.55, ease: 'power1.out' }, t);
+                // 跳ね飛んだあと、スクロール誘導をふわっと出す
+                tl.call(showScrollCue, null, t + 0.4);
             }
 
             // ② キャラをタップした後: 右上から落ちてきてキャラに当たり、
