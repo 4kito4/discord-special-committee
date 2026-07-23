@@ -499,107 +499,36 @@
             if (reduce || typeof gsap === 'undefined') return;
             gsap.registerPlugin(ScrollTrigger);
 
-            // ===== オープニング: 画面を埋め尽くす葉が舞い上がって視界が開ける =====
-            // 葉は canvas 1枚にまとめて描画（DOM数百枚より大幅に軽く、60fpsでスムーズ）
+            // ===== オープニング: 何層にも積もった紅葉が舞い上がるムービー =====
             var overlay = document.createElement('div');
-            overlay.className = 'bg-mesh';
-            overlay.style.cssText = 'position:fixed;inset:0;z-index:70;pointer-events:none;';
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:70;background:#f4f2ee;cursor:pointer;';
+            var vid = document.createElement('video');
+            vid.src = 'aki_ha_intro_leaves.mp4';
+            vid.muted = true;
+            vid.autoplay = true;
+            vid.playsInline = true;
+            vid.preload = 'auto';
+            vid.setAttribute('muted', '');
+            vid.setAttribute('playsinline', '');
+            vid.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+            overlay.appendChild(vid);
+            var skipHint = document.createElement('div');
+            skipHint.textContent = 'タップでスキップ';
+            skipHint.style.cssText = 'position:absolute;right:1.25rem;bottom:1.25rem;'
+                + 'background:rgba(255,255,255,.85);color:#3C4043;font-weight:700;font-size:.75rem;'
+                + 'padding:.4rem .9rem;border-radius:999px;box-shadow:0 2px 8px rgba(32,33,36,.15);';
+            overlay.appendChild(skipHint);
             document.body.appendChild(overlay);
-            var canvas = document.createElement('canvas');
-            canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:71;pointer-events:none;';
-            document.body.appendChild(canvas);
             document.documentElement.style.overflow = 'hidden';
             var unlock = function () { document.documentElement.style.overflow = ''; };
-            setTimeout(unlock, 4500); // 保険
-
-            var vw = window.innerWidth, vh = window.innerHeight;
-            var dpr = Math.min(window.devicePixelRatio || 1, 2);
-            canvas.width = vw * dpr;
-            canvas.height = vh * dpr;
-            var ctx = canvas.getContext('2d');
-            ctx.scale(dpr, dpr);
-
-            var SRC_BIG = ['aki_ha_deco_leaf_l.png', 'aki_ha_deco_leaf_r.png', 'aki_ha_deco_leaf_s3.png'];
-            var SRC_SMALL = ['aki_ha_deco_leaf_s1.png', 'aki_ha_deco_leaf_s2.png'];
-            var pool = {};
-            SRC_BIG.concat(SRC_SMALL, ['aki_ha_deco_lemon.png', 'aki_ha_deco_charm.png']).forEach(function (s) {
-                var im = new Image();
-                im.src = s;
-                pool[s] = im;
-            });
-            function rand(a, b) { return a + Math.random() * (b - a); }
-            function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-
-            var leaves = [];
-            function addLeaf(src, x, y, size) {
-                leaves.push({
-                    img: pool[src], x: x, y: y, size: size,
-                    rot: rand(0, Math.PI * 2), spin: rand(-7, 7),
-                    delay: rand(0, 0.5), dur: rand(1.0, 1.7),
-                    wind: rand(-0.3, 0.3) * vw,
-                    swayAmp: rand(5, 18), swayFreq: rand(1.2, 3.0), phase: rand(0, Math.PI * 2)
-                });
-            }
-            // 奥の層: 小さめの葉をグリッド+ジッターで隙間なく敷き詰める
-            // （s1/s2 は素材の端が切れているため拡大表示には使わない）
-            var cell = vw < 768 ? 48 : 56;
-            for (var gy = -1; gy <= Math.ceil(vh / cell); gy++) {
-                for (var gx = -1; gx <= Math.ceil(vw / cell); gx++) {
-                    addLeaf(pick(SRC_BIG),
-                        gx * cell + rand(-cell * 0.4, cell * 0.4),
-                        gy * cell + rand(-cell * 0.4, cell * 0.4),
-                        rand(cell * 0.95, cell * 1.45));
-                }
-            }
-            // 中間の層: さらに小さい葉を重ねて厚みを出す
-            var midCount = Math.round(vw * vh / 20000);
-            for (var i = 0; i < midCount; i++) {
-                addLeaf(pick(SRC_BIG.concat(SRC_SMALL)), rand(-40, vw + 40), rand(-40, vh + 40), rand(22, 46));
-            }
-            // 手前の層: ひと回り大きい葉をまばらに
-            var frontCount = Math.round(vw * vh / 32000);
-            for (var j = 0; j < frontCount; j++) {
-                addLeaf(pick(SRC_BIG), rand(-40, vw + 40), rand(-40, vh + 40), rand(52, 84));
-            }
-            addLeaf('aki_ha_deco_lemon.png', rand(vw * 0.15, vw * 0.85), rand(vh * 0.2, vh * 0.8), 54);  // 葉に混ざったレモン
-            addLeaf('aki_ha_deco_charm.png', rand(vw * 0.15, vw * 0.85), rand(vh * 0.2, vh * 0.8), 40);  // 星のチャームも一緒に舞う
-
-            var tickStart = null;
-            function drawLeaves(time) {
-                if (tickStart === null) tickStart = time;
-                var t = time - tickStart;
-                ctx.clearRect(0, 0, vw, vh);
-                var alive = false;
-                for (var k = 0; k < leaves.length; k++) {
-                    var L = leaves[k];
-                    var p = (t - L.delay) / L.dur;
-                    if (p < 0) p = 0;
-                    if (p < 1) alive = true; else p = 1;
-                    var e = p * p * p; // cubic-in: ふわっと浮いてスッと抜ける
-                    var im = L.img;
-                    if (!im.naturalWidth) continue;
-                    var y = L.y - e * (vh + L.y + L.size * 2);
-                    var x = L.x + Math.sin(t * L.swayFreq + L.phase) * L.swayAmp + e * L.wind;
-                    var w = L.size;
-                    var h = L.size * im.naturalHeight / im.naturalWidth;
-                    ctx.save();
-                    ctx.translate(x, y);
-                    ctx.rotate(L.rot + e * L.spin);
-                    ctx.drawImage(im, -w / 2, -h / 2, w, h);
-                    ctx.restore();
-                }
-                if (!alive && t > 0.6) {
-                    gsap.ticker.remove(drawLeaves);
-                    canvas.remove();
-                }
-            }
+            setTimeout(unlock, 8000); // 保険
 
             var master = gsap.timeline({
                 paused: true,
                 onComplete: function () { overlay.remove(); unlock(); }
             });
-            master.to(overlay, { opacity: 0, duration: 0.9, ease: 'power1.inOut' }, 0.55)
-                .from('#hero', { scale: 1.12, autoAlpha: 0, duration: 1.2, ease: 'power3.out', clearProps: 'all' }, 0.45);
+            master.to(overlay, { opacity: 0, duration: 0.9, ease: 'power1.inOut' }, 0)
+                .from('#hero', { scale: 1.12, autoAlpha: 0, duration: 1.2, ease: 'power3.out', clearProps: 'all' }, 0);
 
             // ヒーロー: 名前を1文字ずつに分割して立ち上げる
             var nameEl = document.getElementById('hero-name-ja');
@@ -628,26 +557,27 @@
                 .from('#hero-cta', { opacity: 0, y: 24, duration: 0.7 }, '-=0.5')
                 .from('#hero-avatar', { opacity: 0, scale: 0.8, duration: 1.0, ease: 'back.out(1.6)' }, 0.25);
 
-            // 葉が舞い上がり視界が開けたタイミングでヒーローの演出を始める
-            master.call(function () { intro.play(); }, null, 0.75);
+            // 視界が開けたタイミングでヒーローの演出を始める
+            master.call(function () { intro.play(); }, null, 0.25);
 
-            // 葉の画像が読み込めてから開始（最大900msで見切り発車）
-            var started = false;
-            function startMaster() {
-                if (started) return;
-                started = true;
+            // ムービーの葉が舞い上がりきる頃（白く抜ける直前）に本編へクロスフェード
+            var revealed = false;
+            function reveal() {
+                if (revealed) return;
+                revealed = true;
+                vid.removeAttribute('loop');
                 master.play();
-                gsap.ticker.add(drawLeaves);
             }
-            var pending = Object.keys(pool).map(function (k) { return pool[k]; }).filter(function (im) { return !im.complete; });
-            if (pending.length === 0) {
-                startMaster();
-            } else {
-                var timer = setTimeout(startMaster, 900);
-                Promise.all(pending.map(function (f) {
-                    return new Promise(function (res) { f.onload = f.onerror = res; });
-                })).then(function () { clearTimeout(timer); startMaster(); });
-            }
+            vid.playbackRate = 1.8;  // 10秒素材を約4秒でテンポよく
+            vid.addEventListener('timeupdate', function () {
+                if (vid.currentTime >= 6.8) reveal();
+            });
+            vid.addEventListener('ended', reveal);
+            vid.addEventListener('error', reveal);
+            overlay.addEventListener('click', reveal);  // タップでスキップ
+            var playing = vid.play();
+            if (playing && playing.catch) playing.catch(function () { reveal(); });
+            setTimeout(function () { if (vid.currentTime < 0.2) reveal(); }, 2000);  // 再生できない環境は即本編へ
 
             // ヒーロー: マウスにゆったり追従するアバター（デスクトップのみ）
             var fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
