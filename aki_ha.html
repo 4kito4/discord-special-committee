@@ -208,7 +208,7 @@
                     </a>
                 </div>
             </div>
-            <div class="md:col-span-5 order-1 md:order-2 flex justify-center md:justify-end">
+            <div class="md:col-span-5 order-1 md:order-2 flex justify-center">
                 <div id="hero-avatar" class="relative">
                     <div class="absolute inset-0 bg-gblue/20 blob-shape blur-xl scale-110"></div>
                     <button id="avatar-reveal" type="button" aria-label="マスコットの正体を見る"
@@ -568,7 +568,7 @@
                 vid.removeAttribute('loop');
                 master.play();
             }
-            vid.playbackRate = 1.8;  // 10秒素材を約4秒でテンポよく
+            vid.playbackRate = 2.5;  // 10秒素材を約2.7秒でテンポよく
             vid.addEventListener('timeupdate', function () {
                 if (vid.currentTime >= 6.8) reveal();
             });
