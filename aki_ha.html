@@ -67,6 +67,7 @@
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+            transform: translateZ(0); /* 背後のアニメーションによる再ブラーのちらつきを防ぐ */
         }
 
         @keyframes gradientShift {
@@ -321,7 +322,7 @@
 
         <!-- コミュニティでの活動 -->
         <section id="activity" class="max-w-4xl mx-auto relative">
-            <img src="aki_ha_deco_leaf_r.png" alt="" class="deco-parallax absolute -top-10 right-0 md:-right-10 w-14 md:w-20 opacity-80 animate-float pointer-events-none" style="animation-delay: -3s;" onerror="this.remove()">
+            <img src="aki_ha_deco_leaf_r.png" alt="" class="deco-parallax absolute -top-10 right-0 md:-right-10 w-14 md:w-20 opacity-80 pointer-events-none" onerror="this.remove()">
             <h2 class="reveal text-3xl md:text-4xl font-bold text-gdark text-center mb-4">コミュニティでの活動</h2>
             <p class="reveal text-center text-gray-600 font-medium mb-14 max-w-2xl mx-auto">
                 全国から選出された31名のコミュニティアンバサダーの一人として、複数の委員会で運営に関わっています。
@@ -616,6 +617,7 @@
             function bumpAvatar(dir) {
                 var av = document.getElementById('hero-avatar');
                 if (!av) return;
+                gsap.killTweensOf(av);
                 gsap.timeline()
                     .to(av, { x: 16 * dir, rotation: 5 * dir, duration: 0.09, ease: 'power2.out' })
                     .to(av, { x: 0, rotation: 0, duration: 0.7, ease: 'elastic.out(1, 0.45)' });
@@ -858,10 +860,10 @@
                 var rot = p.side === 'right' ? -10 : 10;
                 gsap.set(img, { xPercent: hiddenX });
                 var show = function () {
-                    gsap.to(img, { xPercent: peekX, rotation: rot, duration: 0.7, ease: 'back.out(1.8)' });
+                    gsap.to(img, { xPercent: peekX, rotation: rot, duration: 0.7, ease: 'back.out(1.8)', overwrite: 'auto' });
                 };
                 var hide = function () {
-                    gsap.to(img, { xPercent: hiddenX, rotation: 0, duration: 0.5, ease: 'power2.in' });
+                    gsap.to(img, { xPercent: hiddenX, rotation: 0, duration: 0.5, ease: 'power2.in', overwrite: 'auto' });
                 };
                 ScrollTrigger.create({
                     trigger: p.trigger,
@@ -888,14 +890,8 @@
                 });
             });
 
-            // 背景ブロブ: スクロールに合わせてゆっくり視差
-            gsap.utils.toArray('.bg-blob').forEach(function (el, i) {
-                gsap.to(el, {
-                    yPercent: i % 2 === 0 ? 12 : -12,
-                    ease: 'none',
-                    scrollTrigger: { trigger: document.body, start: 'top top', end: 'bottom bottom', scrub: 1.5 }
-                });
-            });
+            // 背景ブロブは CSS の float-slow のみで動かす
+            // （GSAP視差を併用すると transform を奪い合ってちらつくため廃止）
         })();
     </script>
 </body>
