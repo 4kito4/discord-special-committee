@@ -131,6 +131,16 @@
             border-radius: 999px;
         }
 
+        /* チャームの振り子ゆれ */
+        @keyframes swing {
+            0%, 100% { transform: rotate(-8deg); }
+            50% { transform: rotate(8deg); }
+        }
+        .animate-swing {
+            animation: swing 3.2s ease-in-out infinite;
+            transform-origin: top center;
+        }
+
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
                 animation-duration: 0.01ms !important;
@@ -196,15 +206,10 @@
                     <div class="absolute inset-0 bg-gblue/20 blob-shape blur-xl scale-110"></div>
                     <div class="relative w-44 h-44 md:w-60 md:h-60 bg-white blob-shape shadow-xl border border-white flex items-center justify-center animate-float overflow-hidden">
                         <i class="fa-solid fa-flask text-6xl md:text-7xl text-gblue absolute"></i>
-                        <!-- 生成画像を aki_ha_hero.png としてリポジトリ直下に置くと自動で差し替わる（無ければフラスコのまま） -->
-                        <img src="aki_ha_hero.png" alt="" class="w-full h-full object-cover relative z-10" onerror="this.remove()">
+                        <img src="aki_ha_hero.jpg" alt="Aki_Ha のマスコットキャラクター" class="w-full h-full object-cover relative z-10" onerror="this.remove()">
                     </div>
-                    <div class="absolute -top-2 -right-2 w-12 h-12 bg-softyellow rounded-full flex items-center justify-center shadow-md animate-float" style="animation-delay: -2s;">
-                        <i class="fa-solid fa-robot text-gyellow"></i>
-                    </div>
-                    <div class="absolute -bottom-1 -left-4 w-12 h-12 bg-softgreen rounded-full flex items-center justify-center shadow-md animate-float" style="animation-delay: -4s;">
-                        <i class="fa-solid fa-atom text-ggreen"></i>
-                    </div>
+                    <img src="aki_ha_deco_star.png" alt="" class="absolute -top-8 -right-5 w-11 md:w-14 drop-shadow-md animate-float pointer-events-none" style="animation-delay: -2s;" onerror="this.remove()">
+                    <img src="aki_ha_deco_leaf_l.png" alt="" class="absolute -bottom-3 -left-9 w-14 md:w-16 drop-shadow-md animate-float pointer-events-none" style="animation-delay: -4s;" onerror="this.remove()">
                 </div>
             </div>
         </div>
@@ -236,7 +241,8 @@
         </section>
 
         <!-- コミュニティでの活動 -->
-        <section id="activity" class="max-w-4xl mx-auto">
+        <section id="activity" class="max-w-4xl mx-auto relative">
+            <img src="aki_ha_deco_leaf_r.png" alt="" class="deco-parallax absolute -top-10 right-0 md:-right-10 w-14 md:w-20 opacity-80 animate-float pointer-events-none" style="animation-delay: -3s;" onerror="this.remove()">
             <h2 class="reveal text-3xl md:text-4xl font-bold text-gdark text-center mb-4">コミュニティでの活動</h2>
             <p class="reveal text-center text-gray-600 font-medium mb-14 max-w-2xl mx-auto">
                 全国から選出された31名のコミュニティアンバサダーの一人として、複数の委員会で運営に関わっています。
@@ -333,7 +339,10 @@
         <section id="works">
             <div class="text-center mb-14">
                 <p class="reveal font-en text-sm font-bold tracking-widest text-gblue mb-3">WORKS</p>
-                <h2 class="reveal text-3xl md:text-4xl font-bold text-gdark">つくったもの</h2>
+                <h2 class="reveal text-3xl md:text-4xl font-bold text-gdark">
+                    つくったもの
+                    <img src="aki_ha_deco_charm.png" alt="" class="inline-block w-7 md:w-9 -mt-2 ml-1 animate-swing pointer-events-none" onerror="this.remove()">
+                </h2>
             </div>
             <div class="grid md:grid-cols-6 gap-6">
 
@@ -345,9 +354,8 @@
                         </div>
                         <span class="bg-gblue text-white text-xs font-bold px-3 py-1 rounded-full">いちばん力を入れています</span>
                     </div>
-                    <!-- 生成画像を aki_ha_tutor.png としてリポジトリ直下に置くと表示される（無ければ非表示） -->
                     <div class="rounded-2xl overflow-hidden mb-6 border border-white shadow-sm">
-                        <img src="aki_ha_tutor.png" alt="家庭教師マッチングプラットフォームのイメージビジュアル" class="w-full aspect-[21/9] object-cover transition-transform duration-500 group-hover:scale-105" onerror="this.parentElement.remove()">
+                        <img src="aki_ha_tutor.jpg" alt="家庭教師マッチングプラットフォームのイメージビジュアル" class="w-full aspect-[21/9] object-cover transition-transform duration-500 group-hover:scale-105" onerror="this.parentElement.remove()">
                     </div>
                     <h3 class="font-bold text-2xl text-gdark">家庭教師マッチングプラットフォーム</h3>
                     <p class="text-gray-600 font-medium mt-3 leading-relaxed">
@@ -443,7 +451,8 @@
     </main>
 
     <!-- フッター -->
-    <footer class="glass-nav mt-24 pt-16 pb-8 text-center relative border-t border-white/80">
+    <footer class="glass-nav mt-24 pt-16 pb-8 text-center relative border-t border-white/80 overflow-hidden">
+        <img src="aki_ha_deco_lemon.png" alt="" class="absolute -bottom-4 right-4 md:right-10 w-16 md:w-24 rotate-12 animate-float pointer-events-none" style="animation-delay: -1s;" onerror="this.remove()">
         <div class="max-w-4xl mx-auto px-4 relative z-10">
             <h3 class="text-2xl font-bold mb-4 text-gdark">ここまで読んでくれてありがとうございます</h3>
             <p class="text-gray-600 text-sm mb-8 max-w-lg mx-auto leading-relaxed font-medium">
@@ -572,6 +581,20 @@
                     duration: 0.7,
                     ease: 'power3.out',
                     scrollTrigger: { trigger: el, start: 'top 90%', once: true }
+                });
+            });
+
+            // マスコットパーツの装飾: スクロールでゆっくり視差
+            gsap.utils.toArray('.deco-parallax').forEach(function (el) {
+                gsap.to(el, {
+                    yPercent: -35,
+                    ease: 'none',
+                    scrollTrigger: {
+                        trigger: el.parentElement,
+                        start: 'top bottom',
+                        end: 'bottom top',
+                        scrub: 1.2
+                    }
                 });
             });
 
