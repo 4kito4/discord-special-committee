@@ -568,7 +568,7 @@
                 vid.removeAttribute('loop');
                 master.play();
             }
-            vid.playbackRate = 2.5;  // 10秒素材を約2.7秒でテンポよく
+            vid.playbackRate = 3.5;  // 10秒素材を約2秒で一気に
             vid.addEventListener('timeupdate', function () {
                 if (vid.currentTime >= 6.8) reveal();
             });
