@@ -593,49 +593,117 @@
             var unlock = function () { document.documentElement.style.overflow = ''; };
             setTimeout(unlock, 8000); // 保険
 
-            // オープニング後: どんぐりが画面を跳ねながら転がってきて着地する
-            var acornDone = false;
-            function startAcorn() {
-                if (acornDone) return;
-                acornDone = true;
-                var hero = document.getElementById('hero');
-                if (!hero) return;
+            // ===== どんぐり演出 =====
+            var hero = document.getElementById('hero');
+            function spawnAcorn() {
                 var img = document.createElement('img');
                 img.src = 'aki_ha_deco_acorn.png';
                 img.alt = '';
-                var W = hero.clientWidth, H = hero.clientHeight;
-                var mobile = W < 768;
-                img.style.cssText = 'position:absolute;left:0;top:0;width:' + (mobile ? 46 : 64) + 'px;'
+                var mobile = hero.clientWidth < 768;
+                img.style.cssText = 'position:absolute;left:0;top:0;width:' + (mobile ? 44 : 60) + 'px;'
                     + 'z-index:30;pointer-events:none;will-change:transform;'
                     + 'filter:drop-shadow(0 4px 6px rgba(60,64,67,.25));';
                 img.onerror = function () { img.remove(); };
                 hero.appendChild(img);
-                var ground = H * 0.5;
-                var endX = W * (mobile ? 0.75 : 0.6);
-                var endY = H * (mobile ? 0.9 : 0.82);
-                gsap.set(img, { x: -90, y: H * 0.12 });
-                var tl = gsap.timeline();
-                tl.to(img, { x: endX, duration: 3.0, ease: 'none' }, 0)
-                    .to(img, { rotation: 1080, duration: 3.0, ease: 'none' }, 0);
-                // 縦方向: 減衰しながら弾む
-                var ty = gsap.timeline();
-                ty.to(img, { y: ground, duration: 0.55, ease: 'power1.in' })
-                    .to(img, { y: ground - H * 0.3, duration: 0.45, ease: 'power1.out' })
-                    .to(img, { y: ground + H * 0.03, duration: 0.45, ease: 'power1.in' })
-                    .to(img, { y: ground - H * 0.15, duration: 0.35, ease: 'power1.out' })
-                    .to(img, { y: endY, duration: 0.5, ease: 'power1.in' })
-                    .to(img, { y: endY - H * 0.06, duration: 0.22, ease: 'power1.out' })
-                    .to(img, { y: endY, duration: 0.22, ease: 'power1.in' })
-                    .to(img, { y: endY - H * 0.018, duration: 0.13, ease: 'power1.out' })
-                    .to(img, { y: endY, duration: 0.13, ease: 'power1.in' });
-                tl.add(ty, 0);
-                // 着地後はその場でゆらゆら
-                tl.to(img, { rotation: '+=8', duration: 2.4, yoyo: true, repeat: -1, ease: 'sine.inOut' });
+                return img;
+            }
+            function heroPos(el) {
+                var hr = hero.getBoundingClientRect();
+                var r = el.getBoundingClientRect();
+                return { x: r.left - hr.left, y: r.top - hr.top, w: r.width, h: r.height };
+            }
+            // キャラがコツンと押される反応
+            function bumpAvatar(dir) {
+                var av = document.getElementById('hero-avatar');
+                if (!av) return;
+                gsap.timeline()
+                    .to(av, { x: 16 * dir, rotation: 5 * dir, duration: 0.09, ease: 'power2.out' })
+                    .to(av, { x: 0, rotation: 0, duration: 0.7, ease: 'elastic.out(1, 0.45)' });
+            }
+
+            // ① オープニング後: 左上から落ちてテキストを階段状に跳ね下り、
+            //    最後に大きく跳ねてキャラに当たって画面外へ
+            var acorn1Done = false;
+            function startAcorn1() {
+                if (acorn1Done || !hero) return;
+                acorn1Done = true;
+                var img = spawnAcorn();
+                var W = hero.clientWidth, H = hero.clientHeight;
+                var size = W < 768 ? 44 : 60;
+                // テキスト要素の上端を「階段」にする
+                var stepEls = ['hero-badge', 'hero-name-ja', 'hero-en', 'hero-sub', 'hero-cta'];
+                var steps = [];
+                stepEls.forEach(function (id, i) {
+                    var el = document.getElementById(id);
+                    if (!el) return;
+                    var p = heroPos(el);
+                    steps.push({ x: Math.min(p.x + 24 + i * W * 0.07, W * 0.5), y: p.y - size * 0.75 });
+                });
+                if (steps.length === 0) { img.remove(); return; }
+                var av = document.getElementById('hero-avatar');
+                var ap = heroPos(av);
+                var target = { x: ap.x + ap.w / 2 - size / 2, y: ap.y + ap.h * 0.25 };
+
+                gsap.set(img, { x: steps[0].x - 60, y: -90 });
+                var tl = gsap.timeline({ onComplete: function () { img.remove(); } });
+                // 最初の落下
+                tl.to(img, { x: steps[0].x, duration: 0.45, ease: 'none' }, 0)
+                    .to(img, { y: steps[0].y, duration: 0.45, ease: 'power1.in' }, 0);
+                // 階段を跳ね下りる
+                var t = 0.45;
+                for (var i = 1; i < steps.length; i++) {
+                    var d = 0.4;
+                    var peak = Math.min(steps[i - 1].y, steps[i].y) - H * 0.06;
+                    tl.to(img, { x: steps[i].x, duration: d, ease: 'none' }, t)
+                        .to(img, { y: peak, duration: d * 0.45, ease: 'power1.out' }, t)
+                        .to(img, { y: steps[i].y, duration: d * 0.55, ease: 'power1.in' }, t + d * 0.45);
+                    t += d;
+                }
+                // 最後に大きく跳ねてキャラへ
+                var big = 0.75;
+                tl.to(img, { x: target.x, duration: big, ease: 'none' }, t)
+                    .to(img, { y: Math.min(steps[steps.length - 1].y, target.y) - H * 0.3, duration: big * 0.5, ease: 'power1.out' }, t)
+                    .to(img, { y: target.y, duration: big * 0.5, ease: 'power1.in' }, t + big * 0.5);
+                t += big;
+                tl.call(function () { bumpAvatar(1); }, null, t);
+                // 当たって画面外へ跳ね飛ぶ
+                tl.to(img, { x: '+=' + W * 0.35, y: -H * 0.3, duration: 0.55, ease: 'power1.out' }, t)
+                    .to(img, { rotation: 1260, duration: t + 0.55, ease: 'none' }, 0);
+            }
+
+            // ② キャラをタップした後: 右上から落ちてきてキャラに当たり、
+            //    そのまま画面の下へ落ちていく（スクロールへの誘い）
+            var acorn2Done = false;
+            function startAcorn2() {
+                if (acorn2Done || !hero) return;
+                acorn2Done = true;
+                var img = spawnAcorn();
+                var W = hero.clientWidth, H = hero.clientHeight;
+                var size = W < 768 ? 44 : 60;
+                var av = document.getElementById('hero-avatar');
+                var ap = heroPos(av);
+                var hit = { x: ap.x + ap.w * 0.55, y: ap.y - size * 0.4 };
+                gsap.set(img, { x: Math.min(hit.x + 140, W - size), y: -100 });
+                var tl = gsap.timeline({ onComplete: function () { img.remove(); } });
+                tl.to(img, { x: hit.x, duration: 0.55, ease: 'none' }, 0)
+                    .to(img, { y: hit.y, duration: 0.55, ease: 'power1.in' }, 0)
+                    .call(function () { bumpAvatar(-1); }, null, 0.55)
+                    // 当たって小さく跳ね返ってから画面下へ
+                    .to(img, { x: hit.x - 60, duration: 0.3, ease: 'none' }, 0.55)
+                    .to(img, { y: hit.y - H * 0.08, duration: 0.3, ease: 'power1.out' }, 0.55)
+                    .to(img, { x: hit.x - 110, duration: 1.0, ease: 'none' }, 0.85)
+                    .to(img, { y: H + 260, duration: 1.0, ease: 'power1.in' }, 0.85)
+                    .to(img, { rotation: -900, duration: 1.85, ease: 'none' }, 0);
+            }
+            if (revealBtn) {
+                revealBtn.addEventListener('click', function () {
+                    setTimeout(startAcorn2, 350);
+                }, { once: true });
             }
 
             var master = gsap.timeline({
                 paused: true,
-                onComplete: function () { overlay.remove(); unlock(); startAcorn(); }
+                onComplete: function () { overlay.remove(); unlock(); startAcorn1(); }
             });
             master.to(overlay, { opacity: 0, duration: 0.9, ease: 'power1.inOut' }, 0)
                 .from('#hero', { scale: 1.12, autoAlpha: 0, duration: 1.2, ease: 'power3.out', clearProps: 'all' }, 0);
