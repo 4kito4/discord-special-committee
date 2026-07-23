@@ -476,6 +476,58 @@
             if (reduce || typeof gsap === 'undefined') return;
             gsap.registerPlugin(ScrollTrigger);
 
+            // ===== オープニング: 地面に積もった葉がブワッと舞い上がって視界が開ける =====
+            var LEAF_SRCS = [
+                'aki_ha_deco_leaf_s1.png', 'aki_ha_deco_leaf_s2.png', 'aki_ha_deco_leaf_s3.png',
+                'aki_ha_deco_leaf_l.png', 'aki_ha_deco_leaf_r.png'
+            ];
+            var overlay = document.createElement('div');
+            overlay.className = 'bg-mesh';
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:70;pointer-events:none;';
+            var ground = document.createElement('div');
+            ground.style.cssText = 'position:absolute;left:0;right:0;bottom:0;height:40%;'
+                + 'background:linear-gradient(to top, rgba(251,188,5,.16), rgba(234,67,53,.05) 55%, transparent);';
+            overlay.appendChild(ground);
+
+            var flyers = [];
+            function spawn(src, size, bottomMax) {
+                var img = document.createElement('img');
+                img.src = src;
+                img.alt = '';
+                img.style.cssText = 'position:absolute;width:' + size + 'px;'
+                    + 'left:' + gsap.utils.random(-4, 96) + '%;'
+                    + 'bottom:' + gsap.utils.random(-14, bottomMax) + 'px;'
+                    + 'transform:rotate(' + gsap.utils.random(-85, 85) + 'deg);'
+                    + 'will-change:transform;filter:drop-shadow(0 2px 3px rgba(60,64,67,.18));';
+                overlay.appendChild(img);
+                flyers.push(img);
+            }
+            var leafCount = window.innerWidth < 768 ? 20 : 30;
+            for (var i = 0; i < leafCount; i++) {
+                spawn(LEAF_SRCS[i % LEAF_SRCS.length], gsap.utils.random(34, 104), 52);
+            }
+            spawn('aki_ha_deco_lemon.png', 60, 20);   // 葉の中に埋まったレモン
+            spawn('aki_ha_deco_charm.png', 42, 30);   // 星のチャームも一緒に舞う
+            document.body.appendChild(overlay);
+            document.documentElement.style.overflow = 'hidden';
+            var unlock = function () { document.documentElement.style.overflow = ''; };
+            setTimeout(unlock, 4500); // 保険
+
+            var master = gsap.timeline({
+                paused: true,
+                onComplete: function () { overlay.remove(); unlock(); }
+            });
+            master.to(flyers, {
+                    y: function () { return -(window.innerHeight + 300); },
+                    x: function () { return gsap.utils.random(-340, 340); },
+                    rotation: function () { return gsap.utils.random(-720, 720); },
+                    duration: function () { return gsap.utils.random(1.1, 1.9); },
+                    ease: 'power2.in',
+                    stagger: { each: 0.02, from: 'random' }
+                }, 0)
+                .to(overlay, { opacity: 0, duration: 0.9, ease: 'power1.inOut' }, 0.55)
+                .from('#hero', { scale: 1.12, autoAlpha: 0, duration: 1.2, ease: 'power3.out', clearProps: 'all' }, 0.45);
+
             // ヒーロー: 名前を1文字ずつに分割して立ち上げる
             var nameEl = document.getElementById('hero-name-ja');
             if (nameEl) {
@@ -488,7 +540,7 @@
                     nameEl.appendChild(s);
                 });
             }
-            var intro = gsap.timeline({ defaults: { ease: 'power3.out' } });
+            var intro = gsap.timeline({ paused: true, defaults: { ease: 'power3.out' } });
             intro.from('#hero-badge', { opacity: 0, y: 24, duration: 0.6 })
                 .from('#hero-name-ja span', {
                     opacity: 0,
@@ -502,6 +554,26 @@
                 .from('#hero-sub', { opacity: 0, y: 24, duration: 0.7 }, '-=0.5')
                 .from('#hero-cta', { opacity: 0, y: 24, duration: 0.7 }, '-=0.5')
                 .from('#hero-avatar', { opacity: 0, scale: 0.8, duration: 1.0, ease: 'back.out(1.6)' }, 0.25);
+
+            // 葉が舞い上がり視界が開けたタイミングでヒーローの演出を始める
+            master.call(function () { intro.play(); }, null, 0.75);
+
+            // 葉の画像が読み込めてから開始（最大900msで見切り発車）
+            var started = false;
+            function startMaster() {
+                if (started) return;
+                started = true;
+                master.play();
+            }
+            var pending = flyers.filter(function (f) { return !f.complete; });
+            if (pending.length === 0) {
+                startMaster();
+            } else {
+                var timer = setTimeout(startMaster, 900);
+                Promise.all(pending.map(function (f) {
+                    return new Promise(function (res) { f.onload = f.onerror = res; });
+                })).then(function () { clearTimeout(timer); startMaster(); });
+            }
 
             // ヒーロー: マウスにゆったり追従するアバター（デスクトップのみ）
             var fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
