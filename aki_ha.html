@@ -47,6 +47,13 @@
             background-size: cover;
         }
 
+        /* マスコットの星柄ファーを白で薄めた背景テクスチャ */
+        .bg-fur {
+            background-color: #fdf9ea;
+            background-image: url('aki_ha_bg_tile.jpg');
+            background-size: 720px auto;
+        }
+
         .glass-card {
             background: rgba(255, 255, 255, 0.6);
             backdrop-filter: blur(16px);
@@ -151,7 +158,7 @@
         }
     </style>
 </head>
-<body id="top" class="bg-mesh text-gray-800 antialiased selection:bg-gblue selection:text-white relative overflow-x-hidden">
+<body id="top" class="bg-fur text-gray-800 antialiased selection:bg-gblue selection:text-white relative overflow-x-hidden">
 
     <!-- 背景装飾ブロブ -->
     <div class="bg-blob fixed top-20 right-10 w-72 h-72 bg-gblue/10 blob-shape blur-2xl -z-10 pointer-events-none animate-float-slow"></div>
@@ -204,10 +211,12 @@
             <div class="md:col-span-5 order-1 md:order-2 flex justify-center md:justify-end">
                 <div id="hero-avatar" class="relative">
                     <div class="absolute inset-0 bg-gblue/20 blob-shape blur-xl scale-110"></div>
-                    <div class="relative w-44 h-44 md:w-60 md:h-60 bg-white blob-shape shadow-xl border border-white flex items-center justify-center animate-float overflow-hidden">
-                        <i class="fa-solid fa-flask text-6xl md:text-7xl text-gblue absolute"></i>
-                        <img src="aki_ha_hero.jpg" alt="Aki_Ha のマスコットキャラクター" class="w-full h-full object-cover relative z-10" onerror="this.remove()">
-                    </div>
+                    <button id="avatar-reveal" type="button" aria-label="マスコットの正体を見る"
+                        class="relative w-44 h-44 md:w-60 md:h-60 bg-white blob-shape shadow-xl border border-white flex items-center justify-center animate-float overflow-hidden cursor-pointer">
+                        <img id="avatar-sil" src="aki_ha_silhouette.png" alt="" class="w-3/4 h-3/4 object-contain relative z-10 transition-opacity duration-700" onerror="this.remove()">
+                        <img id="avatar-col" src="aki_ha_hero.jpg" alt="Aki_Ha のマスコットキャラクター" class="absolute inset-0 w-full h-full object-cover z-20 opacity-0 transition-opacity duration-700 pointer-events-none" onerror="this.remove()">
+                    </button>
+                    <span id="avatar-hint" class="absolute -bottom-5 left-1/2 -translate-x-1/2 z-30 bg-white/90 text-gblue text-xs font-bold px-3 py-1 rounded-full shadow animate-bounce whitespace-nowrap pointer-events-none">タップしてみて</span>
                     <img src="aki_ha_deco_star.png" alt="" class="absolute -top-8 -right-5 w-11 md:w-14 drop-shadow-md animate-float pointer-events-none" style="animation-delay: -2s;" onerror="this.remove()">
                     <img src="aki_ha_deco_leaf_l.png" alt="" class="absolute -bottom-3 -left-9 w-14 md:w-16 drop-shadow-md animate-float pointer-events-none" style="animation-delay: -4s;" onerror="this.remove()">
                 </div>
@@ -347,7 +356,8 @@
             <div class="grid md:grid-cols-6 gap-6">
 
                 <!-- 家庭教師マッチングプラットフォーム（フィーチャー） -->
-                <div class="work-card group md:col-span-6 lg:col-span-4 rounded-[2rem] p-8 md:p-10 bg-gradient-to-br from-softblue via-white to-white border border-white shadow-lg hover:-translate-y-1 hover:shadow-xl transition-all">
+                <div class="work-card group relative md:col-span-6 lg:col-span-4 rounded-[2rem] p-8 md:p-10 bg-gradient-to-br from-softblue via-white to-white border border-white shadow-lg hover:-translate-y-1 hover:shadow-xl transition-all">
+                    <img src="aki_ha_scarf.png" alt="" class="absolute -top-8 right-1 md:-right-7 w-32 md:w-48 rotate-6 drop-shadow-md pointer-events-none z-10" onerror="this.remove()">
                     <div class="flex items-center gap-3 mb-4">
                         <div class="w-12 h-12 bg-gblue rounded-2xl flex items-center justify-center shadow-md transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
                             <i class="fa-solid fa-chalkboard-user text-white text-xl"></i>
@@ -472,6 +482,19 @@
     <script>
         // モーションは加算方式: GSAP が読めない環境や reduced-motion では静的表示のまま
         (function () {
+            // シルエット→クリックで本体をグラデーション表示（GSAP不要、常に有効）
+            var revealBtn = document.getElementById('avatar-reveal');
+            if (revealBtn) {
+                revealBtn.addEventListener('click', function () {
+                    var col = document.getElementById('avatar-col');
+                    var sil = document.getElementById('avatar-sil');
+                    var hint = document.getElementById('avatar-hint');
+                    if (col) col.style.opacity = '1';
+                    if (sil) sil.style.opacity = '0';
+                    if (hint) hint.remove();
+                }, { once: true });
+            }
+
             var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
             if (reduce || typeof gsap === 'undefined') return;
             gsap.registerPlugin(ScrollTrigger);
@@ -484,30 +507,30 @@
             var overlay = document.createElement('div');
             overlay.className = 'bg-mesh';
             overlay.style.cssText = 'position:fixed;inset:0;z-index:70;pointer-events:none;';
-            var ground = document.createElement('div');
-            ground.style.cssText = 'position:absolute;left:0;right:0;bottom:0;height:40%;'
-                + 'background:linear-gradient(to top, rgba(251,188,5,.16), rgba(234,67,53,.05) 55%, transparent);';
-            overlay.appendChild(ground);
 
             var flyers = [];
-            function spawn(src, size, bottomMax) {
+            function spawn(src, size) {
                 var img = document.createElement('img');
                 img.src = src;
                 img.alt = '';
                 img.style.cssText = 'position:absolute;width:' + size + 'px;'
-                    + 'left:' + gsap.utils.random(-4, 96) + '%;'
-                    + 'bottom:' + gsap.utils.random(-14, bottomMax) + 'px;'
-                    + 'transform:rotate(' + gsap.utils.random(-85, 85) + 'deg);'
+                    + 'left:' + gsap.utils.random(-5, 97) + '%;'
+                    + 'top:' + gsap.utils.random(-6, 94) + '%;'
+                    + 'transform:rotate(' + gsap.utils.random(-120, 120) + 'deg);'
                     + 'will-change:transform;filter:drop-shadow(0 2px 3px rgba(60,64,67,.18));';
                 overlay.appendChild(img);
                 flyers.push(img);
             }
-            var leafCount = window.innerWidth < 768 ? 20 : 30;
+            // 画面いっぱいに大小さまざまな葉っぱをちりばめる
+            // （s1/s2 は素材の端が切れているため小サイズ専用）
+            var SMALL_ONLY = { 'aki_ha_deco_leaf_s1.png': 1, 'aki_ha_deco_leaf_s2.png': 1 };
+            var leafCount = window.innerWidth < 768 ? 26 : 44;
             for (var i = 0; i < leafCount; i++) {
-                spawn(LEAF_SRCS[i % LEAF_SRCS.length], gsap.utils.random(34, 104), 52);
+                var leafSrc = LEAF_SRCS[i % LEAF_SRCS.length];
+                spawn(leafSrc, SMALL_ONLY[leafSrc] ? gsap.utils.random(22, 56) : gsap.utils.random(28, 140));
             }
-            spawn('aki_ha_deco_lemon.png', 60, 20);   // 葉の中に埋まったレモン
-            spawn('aki_ha_deco_charm.png', 42, 30);   // 星のチャームも一緒に舞う
+            spawn('aki_ha_deco_lemon.png', 64);   // 葉に混ざったレモン
+            spawn('aki_ha_deco_charm.png', 46);   // 星のチャームも一緒に舞う
             document.body.appendChild(overlay);
             document.documentElement.style.overflow = 'hidden';
             var unlock = function () { document.documentElement.style.overflow = ''; };
@@ -653,6 +676,42 @@
                     duration: 0.7,
                     ease: 'power3.out',
                     scrollTrigger: { trigger: el, start: 'top 90%', once: true }
+                });
+            });
+
+            // カラーバリエーションのちびキャラが画面端からのぞく
+            var PEEKS = [
+                { src: 'aki_ha_mini_pink.png',   side: 'right', top: '30%', trigger: '#about' },
+                { src: 'aki_ha_mini_green.png',  side: 'left',  top: '48%', trigger: '#activity' },
+                { src: 'aki_ha_mini_blue.png',   side: 'right', top: '55%', trigger: '#works' },
+                { src: 'aki_ha_mini_yellow.png', side: 'left',  top: '62%', trigger: 'footer' }
+            ];
+            PEEKS.forEach(function (p) {
+                var img = document.createElement('img');
+                img.src = p.src;
+                img.alt = '';
+                img.style.cssText = 'position:fixed;' + p.side + ':0;top:' + p.top + ';z-index:40;'
+                    + 'width:' + (window.innerWidth < 768 ? 62 : 90) + 'px;pointer-events:none;'
+                    + 'will-change:transform;filter:drop-shadow(0 4px 8px rgba(60,64,67,.2));';
+                document.body.appendChild(img);
+                var hiddenX = p.side === 'right' ? 110 : -110;
+                var peekX = p.side === 'right' ? 42 : -42;
+                var rot = p.side === 'right' ? -10 : 10;
+                gsap.set(img, { xPercent: hiddenX });
+                var show = function () {
+                    gsap.to(img, { xPercent: peekX, rotation: rot, duration: 0.7, ease: 'back.out(1.8)' });
+                };
+                var hide = function () {
+                    gsap.to(img, { xPercent: hiddenX, rotation: 0, duration: 0.5, ease: 'power2.in' });
+                };
+                ScrollTrigger.create({
+                    trigger: p.trigger,
+                    start: 'top 65%',
+                    end: 'bottom 35%',
+                    onEnter: show,
+                    onEnterBack: show,
+                    onLeave: hide,
+                    onLeaveBack: hide
                 });
             });
 
